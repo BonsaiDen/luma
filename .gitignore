@@ -1,3 +1,4 @@
 deps/include/*.h
 deps/lib/*.a
 external/*
+*.h.gch

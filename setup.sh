@@ -192,7 +192,13 @@ setup_project() {
     echo " |- Copying libs"
     copy_libs
     echo " \- Done"
+
+    echo ""
+    echo "=== Testing ==="
+
 }
 
-build_dependencies
+#build_dependencies
+gcc -o setupTest -Wall -Wextra -Wno-unused  test/*.c deps/lib/*.a -lX11 -lXxf86vm -lGL -lXrandr -lXi -lrt -lasound
+./setupTest
 
