@@ -25,13 +25,15 @@ bool game_init(int argc, char **argv) {
         // TODO setup graphics, input, sound etc.
         char *filename;
         if (internal_find_module(argc, argv, &filename)) {
+
             if (vm_require(filename)) {
                 game_info("init success");
                 success = true;
             }
-        }
 
-        free(filename);
+            free(filename);
+
+        }
 
     }
 
@@ -63,6 +65,22 @@ void game_api() {
 
 // Internal -------------------------------------------------------------------
 // ----------------------------------------------------------------------------
+int internal_get_type(const char *path) {
+    
+    struct stat s;
+    if (stat(path, &s) == 0) {
+        if (S_ISREG(s.st_mode)) {
+            return 1;
+
+        } else if (S_ISDIR(s.st_mode)) {
+            return 2;
+        }
+    }
+
+    return 0;
+
+}
+
 const char *internal_get_working_dir() {
     
     char buf[PATH_MAX];
@@ -76,13 +94,11 @@ const char *internal_get_working_dir() {
 
 }
 
-bool internal_find_module(int argc, char **argv, char **module) {
+char *internal_get_path(int argc, char **argv) {
 
-    // Retrieve working directory and the passed path
     const char *cwd = internal_get_working_dir();
-    char *target = argc > 1 ? argv[1] : "";
+    const char *target = argc > 1 ? argv[1] : "";
     char *path = (char*)calloc(strlen(target) + strlen(cwd) + 2, sizeof(char));
-    char *filename;
 
     strcat(path, cwd);
     if (strlen(target) > 0) {
@@ -90,56 +106,69 @@ bool internal_find_module(int argc, char **argv, char **module) {
         strcat(path, target);
     }
 
-    char *pos = strrchr(path, '/');
-    unsigned int offset = pos ? pos - path : 0;
+    return path;
 
-    // Detect whether the target exists and is a file or directory
-    struct stat s;
-    if (stat(path, &s) == 0) {
+}
 
-        // If it's a directoy, we set the default file to "main.lua"
-        if (S_ISDIR(s.st_mode)) {
-            filename = (char*)calloc(8 + 1, sizeof(char));
-            strcat(filename, "main.lua");
-            if (offset == strlen(path) - 1) {
-                path[offset] = '\0';
-            }
-            printf("%s, %d, %d\n", path, offset, strlen(path));
+char *internal_split_path_and_filename(char **path, const int type) {
+
+    const char *pos = strrchr(*path, '/');
+    const unsigned int offset = pos ? pos - *path : 0;
+    char *filename;
+
+    // File
+    if (type == 1) {
+        filename = (char*)calloc(strlen(*path) - offset, sizeof(char));
+        strcpy(filename, *path + offset + 1);
+        *path[offset] = '\0';
+
+    // Directory
+    } else if (type == 2) {
+        filename = (char*)calloc(8 + 1, sizeof(char));
+        strcat(filename, "main.lua");
+        if (offset == strlen(*path) - 1) {
+            *path[offset] = '\0';
+        }
+    }
+
+    return filename;
+
+}
+
+bool internal_find_module(int argc, char **argv, char **module) {
+
+    char *path = internal_get_path(argc, argv);
+    char *filename;
+    const int type = internal_get_type(path);
+    bool success = false;
+
+    if (type != 0) {
+
+        filename = internal_split_path_and_filename(&path, type);
+
+        *module = (char*)calloc(strlen(path) + 2 + strlen(filename), sizeof(char));
+        strcat(*module, path);
+        strcat(*module, "/");
+        strcat(*module, filename);
+        free(filename);
+
+        if (internal_get_type(*module) == 1) {
+            chdir(path);
+            success = true;
+            game_info("init module '%s'", *module);
             
-        // If it's a file, we change the path to the parent and use it as the filename
-        } else if (S_ISREG(s.st_mode)) {
-            filename = (char*)calloc(strlen(path) - offset, sizeof(char));
-            strcpy(filename, path + offset + 1);
-            path[offset] = '\0';
+        } else {
+            free(*module);
+            success = true;
+            game_error("invalid module '%s'", *module);
         }
 
     } else {
         game_error("invalid target '%s'", path);
-        free(path);
-        return false;
     }
 
-    // Build the full module path
-    *module = (char*)calloc(strlen(path) + 2 + strlen(filename), sizeof(char));
-    strcat(*module, path);
-    strcat(*module, "/");
-    strcat(*module, filename);
-
-    // Verify that the target is indeed a file
-    if (stat(*module, &s) == 0 && S_ISREG(s.st_mode)) {
-        game_info("init module '%s'", *module);
-        chdir(path);
-        free(path);
-        free(filename);
-        return true;
-
-    } else {
-        game_error("invalid module '%s'", *module);
-        free(path);
-        free(filename);
-        free(module);
-        return false;
-    }
+    free(path);
+    return success;
 
 }
 

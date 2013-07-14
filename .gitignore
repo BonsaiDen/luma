@@ -1,4 +1,5 @@
 deps/include/*.h
 deps/lib/*.a
+include/boot.lua.h
 external/*
 *.h.gch
