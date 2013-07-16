@@ -25,9 +25,10 @@ bool vm_init();
 bool vm_require(const char *filename);
 bool vm_update();
 bool vm_shutdown();
+void vm_rewind();
 
 
-// Extensions -----------------------------------------------------------------
+// Patches --------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 int luax_require(lua_State * L);
 bool luax_optboolean(lua_State * L, const int idx, const bool b);
