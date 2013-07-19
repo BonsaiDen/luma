@@ -14,13 +14,22 @@
 
 // Structures -----------------------------------------------------------------
 // ----------------------------------------------------------------------------
+struct IOResource;
+typedef struct IOResource {
+    char *filename;
+    unsigned int size;
+    void *handle;
+    void(*release)(struct IOResource *res);
 
+} IOResource;
 
 
 // API ------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
-char *io_load_resource(const char* filename, unsigned int *length);
+IOResource *io_load_text(const char* filename);
 
+bool io_init();
+bool io_shutdown();
 
 #endif
 

@@ -25,7 +25,6 @@
 bool game_init();
 bool game_update();
 bool game_shutdown();
-void game_api();
 
 #endif
 

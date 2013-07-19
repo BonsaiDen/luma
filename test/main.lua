@@ -15,7 +15,7 @@ console.log(obj)
 console.log({1, 2, 3, 4, t = 'foo', sub = {10, 20}})
 
 function foo()
-    local e = test()
+    --local e = test()
 end
 
 foo()

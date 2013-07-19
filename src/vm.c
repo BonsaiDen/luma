@@ -20,12 +20,12 @@ static const luaL_Reg loadedlibs[] = {
   {NULL, NULL}
 };
 
-int errorHandlerStackIndex = 0;
-int internal_handle_error(lua_State *L);
+static int errorHandlerStackIndex = 0;
+static int internal_handle_error(lua_State *L);
 
-bool internal_require_file(const char *filename, const bool wasRequired);
-bool internal_execute_script(const char *buf, unsigned int len, 
-                             const char *filename,  const bool wasRequired);
+static bool internal_require_file(const char *filename, const bool wasRequired);
+static bool internal_execute_script(const char *buf, unsigned int len, 
+                                    const char *filename,  const bool wasRequired);
 
 int test(lua_State *L) {
     void *ptr = lua_newuserdata(L, sizeof(char) * 32);
@@ -120,7 +120,7 @@ void vm_rewind() {
 
 // Internal -------------------------------------------------------------------
 // ----------------------------------------------------------------------------
-int internal_handle_error(lua_State *L) {
+static int internal_handle_error(lua_State *L) {
     
     const char *err = lua_tostring(L, -1); // = 1
     lua_State *s = luaL_newstate();
@@ -131,8 +131,8 @@ int internal_handle_error(lua_State *L) {
 
 }
 
-bool internal_execute_script(const char *buf, unsigned int len, 
-                             const char *filename, const bool wasRequired) {
+static bool internal_execute_script(const char *buf, unsigned int len, 
+                                    const char *filename, const bool wasRequired) {
 
     luaL_loadbuffer(gLuaState, buf, len, filename); 
     if (lua_pcall(gLuaState, 0, 1, errorHandlerStackIndex) != LUA_OK) { 
@@ -152,23 +152,19 @@ bool internal_execute_script(const char *buf, unsigned int len,
 
 }
 
-bool internal_require_file(const char *filename, const bool wasRequired) {
+static bool internal_require_file(const char *filename, const bool wasRequired) {
 
-    char *buf;
-    unsigned int len;
-    bool success = false;
-    buf = io_load_resource(filename, &len);
+    IOResource *text;
+    text = io_load_text(filename);
 
-    if (buf == NULL) {
+    if (text == NULL) {
         vm_error("script '%s' not found", filename);
+        return false;
 
     } else {
         vm_info("script '%s' loaded", filename);
-        success = internal_execute_script(buf, len, filename, wasRequired);
-        free(buf);
+        return internal_execute_script(text->handle, text->size, text->filename, wasRequired);
     }
-
-    return success;
 
 }
 

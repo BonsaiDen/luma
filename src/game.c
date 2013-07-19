@@ -1,34 +1,28 @@
 #include "../include/game.h"
+#include "../include/io.h"
 #include "../include/vm.h"
-
+#include "../include/graphics.h"
 
 #include <sys/stat.h>
 #include <unistd.h>
 
-// Variables ------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
-
-// Structures -----------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
-
 // API ------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
-bool internal_find_module(int argc, char **argv, char **module);
+static bool internal_find_module(int argc, char **argv, char **module);
 
 bool game_init(int argc, char **argv) {
 
     bool success = false;
-    if (vm_init()) {
+    if (io_init() && vm_init()) {
         
-        // TODO setup graphics, input, sound etc.
         char *filename;
         if (internal_find_module(argc, argv, &filename)) {
 
             if (vm_require(filename)) {
-                game_info("init success");
-                success = true;
+                if (graphics_init(320, 240, "luma")) {
+                    game_info("init success");
+                    success = true;
+                }
             }
 
             free(filename);
@@ -41,13 +35,28 @@ bool game_init(int argc, char **argv) {
 
 }
 
+void internal_update(const double time) {
+    //game_info("time = %.3f", time);
+    //vm_update(time);
+    //audio_update(time);
+    //audio_update(time);
+}
+
+void internal_key_callback(GLFWwindow* window, int key, 
+                           int scancode, int action, int mods) {
+    
+}
+
 bool game_update() {
-    return true;
+    return graphics_update(&internal_update, &internal_key_callback);
 }
 
 bool game_shutdown() {
 
-    if (vm_shutdown()) {
+    if (vm_shutdown() 
+        && io_shutdown() 
+        && graphics_shutdown()) {
+
         game_info("shutdown success");
         return true;
 
@@ -58,14 +67,10 @@ bool game_shutdown() {
 
 }
 
-void game_api() {
-    
-}
-
 
 // Internal -------------------------------------------------------------------
 // ----------------------------------------------------------------------------
-int internal_get_type(const char *path) {
+static int internal_get_type(const char *path) {
     
     struct stat s;
     if (stat(path, &s) == 0) {
@@ -81,11 +86,10 @@ int internal_get_type(const char *path) {
 
 }
 
-const char *internal_get_working_dir() {
+char *internal_get_working_dir() {
     
-    char buf[PATH_MAX];
-    const char *cwd;
-    if ((cwd = getcwd(buf, sizeof(buf))) == NULL) {
+    char *cwd;
+    if ((cwd = getcwd(NULL, PATH_MAX)) == NULL) {
         return NULL;
 
     } else {
@@ -94,9 +98,9 @@ const char *internal_get_working_dir() {
 
 }
 
-char *internal_get_path(int argc, char **argv) {
+static char *internal_get_path(int argc, char **argv) {
 
-    const char *cwd = internal_get_working_dir();
+    char *cwd = internal_get_working_dir();
     const char *target = argc > 1 ? argv[1] : "";
     char *path = (char*)calloc(strlen(target) + strlen(cwd) + 2, sizeof(char));
 
@@ -106,11 +110,12 @@ char *internal_get_path(int argc, char **argv) {
         strcat(path, target);
     }
 
+    free(cwd);
     return path;
 
 }
 
-char *internal_split_path_and_filename(char **path, const int type) {
+static char *internal_split_path_and_filename(char **path, const int type) {
 
     const char *pos = strrchr(*path, '/');
     const unsigned int offset = pos ? pos - *path : 0;
@@ -135,7 +140,7 @@ char *internal_split_path_and_filename(char **path, const int type) {
 
 }
 
-bool internal_find_module(int argc, char **argv, char **module) {
+static bool internal_find_module(int argc, char **argv, char **module) {
 
     char *path = internal_get_path(argc, argv);
     char *filename;
@@ -159,7 +164,6 @@ bool internal_find_module(int argc, char **argv, char **module) {
             
         } else {
             free(*module);
-            success = true;
             game_error("invalid module '%s'", *module);
         }
 

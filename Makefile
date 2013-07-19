@@ -1,4 +1,4 @@
-FILES:=src/*.c
+FILES:=src/*.c elib/*.c
 DEPS:=deps/lib/*.a
 LIBS:=-lX11 -lXxf86vm -lGL -lXrandr -lXi -lrt -lasound
 
@@ -10,5 +10,6 @@ build: $(FILES) $(DEPS)
 	strip main
 
 debug: $(FILES)
+	xxd -i src/boot.lua > include/boot.lua.h
 	gcc $(CFLAGS) $(FILES) $(DEPS) $(LIBS) -ggdb
 
